@@ -1,80 +1,38 @@
+// CI/CD pipelines with GitHub Actions
+// Workflows are process flows that you can set up in your repository to run automated tasks 
+
+// deployment pipeline workflow
 name: Deployment pipeline
 
+// The events that trigger the workflow to be executed
 on:
   push:
     branches: 
       - master
-  pull_request:
-    branches: [master]
-    types: [opened, synchronize]
 
-
+// jobs will be run in parallel 
 jobs:
-  simple_deployment_pipeline:
-    runs-on: ubuntu-18.04
+  deployment_pipeline:
+    // setting up the environment that will run this job
+    runs-on: ubuntu-20.04
+
+    // steps in each job will be executed sequentially
     steps:
       - name: Checkout repository
+        // uses tells workflow to run a specific action - this will checkouts the project source code from git
         uses: actions/checkout@v2
 
-      - name: Setup node environemnt
+      - name: Setup Node
+        // use node to run our code
         uses: actions/setup-node@v1
+        // with used to give a "parameter" to the action.
         with:
-          node-version: '12.x'
+          node-version: '15.x'
 
-      - name: Install
-        run: npm install
+      // install the dependencies of the application
+      - name: Install dependencies
+        run : npm install
 
+      // lint the code
       - name: Lint
-        run: npm run eslint
-
-      - name: Build
-        run: npm run build
-
-      - name: Test
-        run: npm run test
-
-      - name: Deploy
-        if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
-        uses: akhileshns/heroku-deploy@v3.12.12 
-        with:
-          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
-          heroku_email: ${{ secrets.HEROKU_EMAIL }}
-          healthcheck: "https://${{secrets.HEROKU_APP_NAME}}.herokuapp.com/health"
-          checkstring: "ok"
-          rollbackonhealthcheckfailed: true
-
-      - uses: actions/checkout@v2
-      - name: Bump version and push tag
-        if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
-        uses: anothrNick/github-tag-action@eca2b69f9e2c24be7decccd0f15fdb1ea5906598
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEFAULT_BUMP: "patch"
-      
-      - name: send slack success notification
-        uses: 8398a7/action-slack@v3
-        with:
-          status: custom
-          fields: commit,author,took
-          custom_payload: |
-            {
-              username: 'action-slack',
-              icon_emoji: ':octocat:',
-              attachments: [{
-              color: 'good',
-                text: `A new version deployed to ${{ secrets.HEROKU_APP_NAME }} (${process.env.AS_COMMIT}) by ${process.env.AS_AUTHOR} succeeded in ${process.env.AS_TOOK}`,
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        if:  ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') && success() }}
-      
-      - name: send slack failure notification
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          fields: all
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} 
-        if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') && failure() }}
+        run: npm run lint
